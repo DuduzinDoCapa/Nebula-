@@ -11,13 +11,18 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
       - name: Compilar APK
         run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
           unzip -q NebulaHub.zip
           cd NebulaHub
           chmod +x gradlew
-          ./gradlew assembleRelease --no-daemon
+          ./gradlew assembleRelease --no-daemon 2>&1 | tee ../build.log
+          exit ${PIPESTATUS[0]}
+      - name: Mostrar erro
+        if: failure()
+        run: |
+          grep -E "^e: |What went wrong|error:|ERROR|Exception|FAILED" -A3 build.log | head -40 | while IFS= read -r l; do echo "::error::$l"; done
       - uses: actions/upload-artifact@v4
         with:
           name: Nebula-APK
